@@ -1,14 +1,3 @@
---// WEAPON SETTINGS TOGGLE
-
-_G.WeaponHook = not _G.WeaponHook
-
-if not _G.WeaponHook then
-    getgenv().WeaponSettingsEnabled = false
-    return
-end
-
-getgenv().WeaponSettingsEnabled = true
-
 getgenv().WeaponSettings = {
     -- Daño
     DefaultDamage = 13,
@@ -19,9 +8,9 @@ getgenv().WeaponSettings = {
     Force = 20,
 
     -- Cooldowns
-    ReloadTime = 0.2,
+    ReloadTime = 0,
     SpecialCooldown = 5,
-    SpecialBuildup = 15,
+    SpecialBuildup = 6,
 
     -- Proyectiles
     BulletSpeed = 100,
@@ -30,6 +19,7 @@ getgenv().WeaponSettings = {
     PassiveAbility = true,
     PassiveChance = 5,
 
+    -- Puedes seguir agregando más
     Radius = 10,
     Knockback = 15,
     Range = 50,
@@ -38,62 +28,50 @@ getgenv().WeaponSettings = {
     CriticalChance = 0,
     CriticalDamage = 2
 }
-
-if not _G.WeaponHookLoaded then
-    _G.WeaponHookLoaded = true
-
-    local function ModifyTable(tbl)
-        if not getgenv().WeaponSettingsEnabled then
-            return
+local function ModifyTable(tbl)
+    for key, value in pairs(tbl) do
+        if typeof(value) == "table" then
+            ModifyTable(value)
+        else
+            local newValue = getgenv().WeaponSettings[key]
+            if newValue ~= nil then
+    if key == "Damage" then
+        -- No modificar si el remoto tiene Damage = 0
+        if value ~= 0 then
+            -- Si tú pones Damage = 0, enviar 0.1
+            tbl[key] = (newValue == 0 and 0.1 or newValue)
         end
 
-        for key, value in pairs(tbl) do
-            if typeof(value) == "table" then
-                ModifyTable(value)
-            else
-                local newValue = getgenv().WeaponSettings[key]
+    elseif key == "Force" then
+        -- No modificar si el remoto tiene Force mayor a 100000
+        if value <= 100000 then
+            tbl[key] = newValue
+        end
 
-                if newValue ~= nil then
+    else
+        tbl[key] = newValue
+    end
+end
+        end
+    end
+end
 
-                    if key == "Damage" then
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
 
-                        if value ~= 0 then
-                            tbl[key] = (newValue == 0 and 0.1 or newValue)
-                        end
+local old
+old = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
 
-                    elseif key == "Force" then
-
-                        if value <= 100000 then
-                            tbl[key] = newValue
-                        end
-
-                    else
-                        tbl[key] = newValue
-                    end
-                end
+    if getnamecallmethod() == "FireServer" then
+        for _, arg in ipairs(args) do
+            if typeof(arg) == "table" then
+                ModifyTable(arg)
             end
         end
     end
 
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
+    return old(self, unpack(args))
+end)
 
-    local old
-    old = hookmetamethod(game, "__namecall", function(self, ...)
-        local args = {...}
-
-        if getgenv().WeaponSettingsEnabled
-            and getnamecallmethod() == "FireServer" then
-
-            for _, arg in ipairs(args) do
-                if typeof(arg) == "table" then
-                    ModifyTable(arg)
-                end
-            end
-        end
-
-        return old(self, unpack(args))
-    end)
-
-    setreadonly(mt, true)
-end
+setreadonly(mt, true)
