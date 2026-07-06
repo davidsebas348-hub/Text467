@@ -60,8 +60,11 @@ if not _G.WeaponHookLoaded then
             if typeof(value) == "table" then
                 ModifyTable(value)
             else
-                local newValue = getgenv().WeaponSettings[key]
+                local newValue = getgenv()[key]
 
+if newValue == nil and getgenv().WeaponSettings then
+    newValue = getgenv().WeaponSettings[key]
+                end
                 if newValue ~= nil then
 
                     if key == "Damage" then
